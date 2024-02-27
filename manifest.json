@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "LookLoud.AI",
+  "version": "1.0",
+  "description": "A browser extension to help blind people browse products on an e-commerce site.",
+  "permissions": ["activeTab", "tabs", "tabCapture", "scripting", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  
+ "commands": {
+      "_execute_action": {
+        "suggested_key": {
+          "default": "Ctrl+X",
+          "mac": "Command+X" 
+        },
+      "global": true
+      }
+    },
+  "action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "48": "icon.png"
+  }
+}
