@@ -1,20 +1,33 @@
 customLogger("Content.js started");
 
+var currentHostname = window.location.hostname;
+getVisitCount();
+
 var flag = true;
 
 if (flag) {
     getMediaPermission();
 }
 
-
 async function getMediaPermission() {
     flag = false;
     navigator.mediaDevices.getUserMedia({
         audio: true
     })
-    .then(stream => {
+    .then(async stream => {
         customLogger("Microphone permission granted");
         customLogger("Started Listening:");
+
+        // const resp = await sendMessageToBackground({ action: "getCurrentTabURL" });
+        // const message = "Current Tab URL: " + resp.currentTabURL;
+        // customLogger(message);
+        // weburl = resp.currentTabURL;
+
+        if (currentHostname.includes("amazon")){
+            textToSpeech("Hi Lakshya, you are now viewing the Amazon webpage. You can address me as Delta");
+        } else if (currentHostname.includes("doordash")) {
+            textToSpeech("Hi Lakshya, you are now viewing the DoorDash webpage. You can address me as Delta");
+        }
 
         startRecognition();
         // processScreen();
@@ -107,9 +120,16 @@ async function performAction(result) {
     
         const indexAfterDelta = result[0].indexOf("delta") + "delta ".length;
         const metricText = result[0].substring(indexAfterDelta);
-        const response = await sendMessageToBackground({ action: "processPrice", speechResult: metricText });
+        var itemsList = getItemsList();
+        const response = await sendMessageToBackground({ action: "processPrice", speechResult: metricText, itemsArray: itemsList });
         const productName = response.speechText;
-        clickOnProduct(productName);
+        customLogger(productName);
+        if (productName.toLowerCase().includes("the website does")){
+            textToSpeech(productName);
+        } else {
+            clickOnProduct(productName);
+        }
+        
     }
 
     if (result[0].includes('cart')) {
@@ -163,16 +183,47 @@ function askPriceMetrics() {
     textToSpeech(instructions);
 }
 
-function processPrice(result) {
+function processPrice() {
     customLogger("Inside Function: processPrice");
-    sendMessageToBackground({ action: "processPrice",  speechResult: result})
-    .then(resp => {
-        customLogger("Received resp");
-        customLogger(resp);
-        const productName = resp.speechText;
-        customLogger(productName);
-        clickOnProduct(productName);
+    var itemList = getItemsList();
+    customLogger(itemList);
+    // sendMessageToBackground({ action: "processPrice",  speechResult: result})
+    // .then(resp => {
+    //     customLogger("Received resp");
+    //     customLogger(resp);
+    //     const productName = resp.speechText;
+    //     customLogger(productName);
+    //     clickOnProduct(productName);
+    // });
+}
+
+function getItemsList() {
+    customLogger("Inside Function: getItemsList");
+    // const itemElements = document.querySelectorAll('div.sg-col-20-of-24[data-asin]');
+    const itemElements = document.querySelectorAll('[data-component-type="s-search-result"]');
+
+    // Initialize an empty array to store the extracted objects
+    const items = [];
+
+    // Iterate over each item element
+    itemElements.forEach(itemElement => {
+        // Extract name, price, and rating
+        const nameElement = itemElement.querySelector('h2.a-size-mini > a');
+        const name = nameElement ? nameElement.textContent.trim() : 'N/A';
+
+        const priceElement = itemElement.querySelector('div.a-row.a-size-base > div.a-row > a > span.a-price > span.a-offscreen');
+        const price = priceElement ? priceElement.textContent.trim() : 'N/A';
+
+        const ratingElement = itemElement.querySelector('div.a-row.a-size-small > span > span');
+        const rating = ratingElement ? ratingElement.textContent.trim() : 'N/A';
+
+        // Create an object with the extracted details and push it to the items array
+        items.push({ name, price, rating });
     });
+    customLogger(items);
+
+    // Return the array of extracted objects
+    return items;
 }
 
 function processScreen() {
@@ -333,3 +384,22 @@ function getTopReview() {
 //       }, timeout);
 //     });
 //    }
+
+function getVisitCount() {
+    customLogger("The current URL: " + currentHostname);
+
+    var visitCountKey = 'visitCount_' + currentHostname;
+
+    // Check if the website has been visited before
+    if(localStorage.getItem(visitCountKey)) {
+        // If yes, increment the count
+        var count = parseInt(localStorage.getItem(visitCountKey));
+        count++;
+        localStorage.setItem(visitCountKey, count);
+    } else {
+        // If no, set the count to 1
+        localStorage.setItem(visitCountKey, 1);
+    }
+
+    customLogger('You have visited ' + currentHostname + ' ' + localStorage.getItem(visitCountKey) + ' times.');
+}
