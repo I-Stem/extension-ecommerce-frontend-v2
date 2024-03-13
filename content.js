@@ -6,12 +6,13 @@ getVisitCount();
 var flag = true;
 //for doordash filter
 let filterToggle = false;
-let foodText = "";
+let foodText = "burger";
 let currentIndexOfItem = 0;
-let searchWindow;
+let readOrder = true;
 
 if (flag) {
   getMediaPermission();
+  // textToSpeech("Hi, I am Delta, how may I help you?");
 }
 
 async function getMediaPermission() {
@@ -30,19 +31,23 @@ async function getMediaPermission() {
       // weburl = resp.currentTabURL;
 
       if (currentHostname.includes("amazon")) {
-        textToSpeech(
-          "Hi Lakshya, you are now viewing the Amazon webpage. You can address me as Delta"
-        );
+        // textToSpeech(
+        //   "Hi Lakshya, you are now viewing the Amazon webpage. You can address me as Delta"
+        // );
       } else if (currentHostname.includes("doordash")) {
-        textToSpeech(
-          "Hi Lakshya, you are now viewing the DoorDash webpage. You can address me as Delta"
-        );
-
+        // textToSpeech(
+        //   "Hi Lakshya, you are now viewing the DoorDash webpage. You can address me as Delta"
+        // );
         // to display the top 5 items
         currentIndexOfItem = 0;
 
         var currentUrl = window.location.href;
         customLogger(currentUrl);
+        if(currentUrl.includes("https://www.doordash.com/home/")) {
+          textToSpeech(
+            "Hi Lakshya, you are now viewing the DoorDash webpage. You can address me as Delta"
+          );
+        }
         if (currentUrl.includes("event_type=search")) {
           var startIndex =
             currentUrl.indexOf("https://www.doordash.com/search/") +
@@ -60,7 +65,12 @@ async function getMediaPermission() {
           customLogger(store);
           textToSpeech("hi there you are now viewing");
           textToSpeech(store);
-          window.onload = performMenuSearch();
+          window.onload = userSelected();
+        } else if(currentUrl.includes("www.doordash.com/consumer/checkout")) {
+          readOrder = false;
+          window.onload = async () => {
+            await orderSummary();
+          }
         }
       }
 
@@ -68,6 +78,105 @@ async function getMediaPermission() {
       // processScreen();
       // processPrice("delta the price is $500, 3.5 stars minimum rating and 1 week of delivery time");
     });
+}
+
+async function orderSummary() {
+  customLogger("inside orderSummary function");
+
+  const deliveryElements = document.querySelectorAll('[aria-labelledby="checkout-time-panel-label"] > div');
+  if(!readOrder) {
+    if(deliveryElements.length > 2) {
+      let standardDelivery = document.querySelector('[aria-labelledby="checkout-time-panel-label"] > [data-testid="DELIVERY_TIME_STANDARD"]');
+      let expressDelivery = document.querySelector('[aria-labelledby="checkout-time-panel-label"] > [data-testid="DELIVERY_TIME_PRIORITY"]');
+      let standardTime = standardDelivery.querySelector('button > div > div+span').textContent.trim();
+      let expressTime = expressDelivery.querySelector('button > div > div+span').textContent.trim();
+      textToSpeech(`Would you like standard delivery ${standardTime} or express delivery ${expressTime}`);
+    } else {
+      readOrder = true;
+    }  
+  }
+  // setTimeout(() => {
+    if(readOrder) {
+
+      textToSpeech("Your Order");
+    const summaryButton = document.querySelector('[data-anchor-id="ToggleAccordionOrderSummary"]');
+    customLogger(summaryButton);
+    summaryButton.click();
+    (document.querySelectorAll('[data-anchor-id="OrderItemContainer"]')).forEach(item => {
+        var nameElement = item.querySelector('span.styles__TextElement-sc-3qedjx-0');
+        var name = nameElement ? nameElement.textContent.trim() : 'N/A';
+  
+        var quantityElement = item.querySelector('div.sc-3d4b3919-5 span.styles__TextElement-sc-3qedjx-0');
+        var quantity = quantityElement ? quantityElement.textContent.trim() : 'N/A';
+  
+        textToSpeech(name);
+        textToSpeech(quantity);
+    });
+    var chargesElement = document.querySelectorAll('[data-testid="LineItems"] > div');
+    chargesElement.forEach((element)=> {
+      var chargeNameElement = element.querySelector('div.ibPoAJ > span');
+      var chargeName = chargeNameElement ? chargeNameElement.textContent.trim() : 'N/A';
+      customLogger(chargeName); 
+      var chargeElement = element.querySelector('div.ibPoAJ > div,[data-anchor-id="OrderCartTotal"]');
+      var charge = chargeElement ? chargeElement.textContent.trim() : 'N/A';
+      customLogger(charge);
+      if(chargeName != 'N/A' && chargeName != 'Dasher Tip') {
+        textToSpeech(chargeName);
+        textToSpeech(charge);
+      }
+        
+    });
+
+    textToSpeech("Would you like to place the order");
+    }
+    
+  // }, 3000);
+  customLogger("exiting orderSummary function");
+}
+
+
+async function userSelected(){
+  customLogger("Inside function userSelected");
+  customLogger(foodText);
+  var menuItems = document.querySelectorAll("div.sc-f9492ecc-11");
+  customLogger(menuItems);
+  var menuFlag = 0;
+  for(let item of menuItems) {
+    const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
+    const itemName = menuItem.textContent.trim();
+    customLogger(itemName);
+    if(itemName.toLowerCase().match(foodText)) {
+      const menuButton = item.querySelector('button.styles__StyledButtonRoot-sc-1ldytso-0');
+      menuButton.click();
+      menuFlag = 1;
+      break;
+    }
+    // textToSpeech(itemName);
+  }
+  if(menuFlag === 0) {
+    for(let item of menuItems) {
+      const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
+      const itemName = menuItem.textContent.trim();
+      customLogger(itemName);
+      if(itemName === "Most Ordered") {
+        const menuButton = item.querySelector('button.styles__StyledButtonRoot-sc-1ldytso-0');
+        menuButton.click();
+        break;
+      }
+      // textToSpeech(itemName);
+    }
+  }
+}
+
+async function displayMenu() {
+  var menuItems = document.querySelectorAll("div.sc-f9492ecc-11");
+  customLogger(menuItems);
+  menuItems.forEach((item)=> {
+    const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
+    const itemName = menuItem.textContent.trim();
+    customLogger(itemName);
+    textToSpeech(itemName);
+  });
 }
 
 async function listItems() {
@@ -206,16 +315,18 @@ async function performAction(result) {
   //for Doordash website
   if(result[0].match("list") && result[0].match("items")) {
     customLogger("list item word found in speech");
-    await listTheItemsOnScreen();
+    currentIndexOfItem = 0;
+    listTheItemsOnScreen();
   }
   if (result[0].includes("find")) {
     customLogger("Find word found in speech");
     customLogger(result[0]);
+    // foodText = "";
     const indexAfterFind = (await result[0].indexOf("find")) + "find ".length;
     const textAfterFind = await result[0].substring(indexAfterFind);
     customLogger(textAfterFind);
     foodText = textAfterFind;
-    foodText = foodText.toLowerCase();
+    // foodText = foodText.toLowerCase();
     await performFind(textAfterFind);
   }
   if (
@@ -245,18 +356,64 @@ async function performAction(result) {
   if (result[0].includes("select")) {
     customLogger("select word found in speech");
     var storeIndex = (await result[0].indexOf("select")) + "select ".length;
-    var storeName = await result[0].substring(storeIndex);
-    customLogger(storeName);
-    selectItem(storeName);
+    var storeOrItemName = await result[0].substring(storeIndex);
+    customLogger(storeOrItemName);
+    var currentUrl = window.location.href;
+    if(currentUrl.includes("www.doordash.com/store")) {
+      selectMenuItem(storeOrItemName);
+    } else {
+      selectItem(storeOrItemName);
+    }
   }
   if(result[0].includes("add") && result[0].includes("order")) {
     customLogger("add & order word found in speech"); 
     addonToOrder(result[0]);
   }
   if(result[0].match("show") && result[0].match("more")) {
-    await listTheItemsOnScreen();
+    listTheItemsOnScreen();
+  }
+  if(result[0].includes("menu")) {
+    customLogger("menu word found in speech");
+    displayMenu();
+    // performMenuSearch();
+
+  }
+  if(result[0].includes("place") && result[0].includes("order")) {
+    customLogger("place order words found in speech");
+    placeOrder();
+  }
+  if(result[0].includes("delivery") && result[0].includes("time")) {
+    var words = result[0].split(' ');
+    words = words.filter((word)=> {
+      return (word != 'Delta' && word != 'delta' && word != 'delivery' && word != 'time');
+    });
+    customLogger(words);
+    await setDelivery(words);
   }
 }
+
+async function setDelivery(words) {
+  let standardDelivery = document.querySelector('[aria-labelledby="checkout-time-panel-label"] > [data-testid="DELIVERY_TIME_STANDARD"]');
+  let expressDelivery = document.querySelector('[aria-labelledby="checkout-time-panel-label"] > [data-testid="DELIVERY_TIME_PRIORITY"]');
+  if(words.includes("express") || words.includes("Express")) {
+    expressDelivery.querySelector('button').click();
+  } else {
+    standardDelivery.querySelector('button').click();
+  }
+  readOrder = true;
+
+  setTimeout(async() => {
+    orderSummary();
+  }, 5000);
+}
+
+async function placeOrder() {
+  customLogger("Inside the placeOrder function");
+  const orderButton = document.querySelector('[data-anchor-id="PlaceOrderButton"]');
+  orderButton.click();
+  textToSpeech("Order Placed");
+}
+
 
 async function addonToOrder(str) {
   
@@ -275,11 +432,11 @@ async function addonToOrder(str) {
 
 //performfilter on /search/store
 function filterOptions() {
-  textToSpeech("There are the following filter options available");
+  textToSpeech("filter options are");
   textToSpeech(
     "By offers      by rating over 4.5     by delivery under 30 minutes    by price      and by DashPass"
   );
-  textToSpeech("what filter would you like to use");
+  // textToSpeech("what filter would you like to use");
 }
 
 async function performFilter(str) {
@@ -300,20 +457,32 @@ async function performFilter(str) {
 }
 
 async function listTheItemsOnScreen(){
+  customLogger("Inside listtheitemsonSCreen function");
   var itemList = await getItemsList();
   textToSpeech("Showing the top 5 results");
-  textToSpeech("The result is sorted by rating from high to low");
-  itemList.sort((a, b) => b.rating - a.rating);
-  // customLogger(itemList);
+  if(itemList.length != 0  && itemList[0].rating) {
+    textToSpeech("The result is sorted by rating from high to low");
+    itemList.sort((a, b) => b.rating - a.rating);
+    // customLogger(itemList);
+  }
   let i;
   for(i = currentIndexOfItem ; (i < itemList.length && i < currentIndexOfItem+5); i++) {
     let item = itemList[i];
     customLogger(item);
     textToSpeech(item.name);
-    textToSpeech("rating ");
+    if(item.rating) {
+      textToSpeech("rating ");
     textToSpeech(item.rating);
-    textToSpeech("delivery time ");
-    textToSpeech(item.deliveryTime);
+    }
+    if(item.deliveryTime) {
+      textToSpeech("delivery time ");
+      textToSpeech(item.deliveryTime);
+    }
+    if(item.price) {
+      textToSpeech("price");
+      textToSpeech(item.price);
+    }
+    
   }
   //update the current index of item on screen
   currentIndexOfItem = i;
@@ -356,7 +525,7 @@ async function performMenuSearch() {
   }
   customLogger(flag);
   //menu audio
-  window.onload =await menuAudio();
+  // window.onload =await menuAudio();
 }
 
 //to speak back the menu in a store
@@ -401,11 +570,14 @@ async function performFind(textAfterFind) {
       // searchBar.closest('form').submit();
       // customLogger("form submitted");
       customLogger("Navigating to: " + textAfterFind);
-      searchWindow = window.location.assign(
+      window.location.assign(
         "https://doordash.com/search/store/" +
           textAfterFind +
           "/?event_type=search"
       );
+      // searchWindow = window.open("https://doordash.com/search/store/" +
+      // textAfterFind +
+      // "/?event_type=search");
     }, 5000);
   }
 }
@@ -459,6 +631,26 @@ function processPrice() {
 }
 
 //select store(DoorDash)
+async function selectMenuItem(selectedItem) {
+  customLogger("inside selectMenuItem function");
+  var menuItems = document.querySelectorAll("div.sc-f9492ecc-11");
+  customLogger(menuItems);
+  for(let item of menuItems) {
+    const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
+    const itemName = menuItem.textContent.trim();
+    if(itemName.toLowerCase().match(selectedItem) || selectedItem.toLowerCase().match(itemName)) {
+      const menuButton = item.querySelector('button');
+      menuButton.click();
+      textToSpeech(itemName);
+      break;
+    }
+  }
+  // menuItems.forEach((item)=> {
+    
+  // });
+
+}
+
 async function selectItem(store) {
   customLogger("inside selectItem function");
   // var storeName = toString(store);
@@ -492,8 +684,8 @@ async function selectItem(store) {
       customLogger(anchorElement);
       var url = anchorElement.href;
       customLogger(url);
-      const storeWindow = window.open(url);
-      storeWindow.close();
+      // const storeWindow = window.open(url);
+      window.location.assign(url);
       break;
     } else {
       customLogger("name did not match");
@@ -505,7 +697,7 @@ async function getItemsList() {
   customLogger("Inside Function: getItemsList");
   // const itemElements = document.querySelectorAll('div.sg-col-20-of-24[data-asin]');
   const itemElements = document.querySelectorAll(
-    '[data-component-type="s-search-result"],[data-anchor-id="StoreLayoutListContainer"] > div > a+div'
+    '[data-component-type="s-search-result"],[data-anchor-id="StoreLayoutListContainer"] > div > a+div,[data-anchor-id="MenuItem"]'
   );
   customLogger(itemElements);
   console.log(typeof itemElements);
@@ -534,32 +726,66 @@ async function getItemsList() {
       // Create an object with the extracted details and push it to the items array
       items.push({ name, price, rating });
     });
+
+
+   //doordash 
   } else if (currentHostname.includes("doordash")) {
     customLogger("inside else");
-    itemElements.forEach((itemElement) => {
-      // Extract name, price, and rating
-      // customLogger("inside foreach");
-      const nameElement = itemElement.querySelector(
-        'div > [data-telemetry-id="store.name"]'
-      );
-      // customLogger(nameElement);
-      const name = nameElement ? nameElement.textContent.trim() : "N/A";
-      // customLogger(name);
-      const timeElement = itemElement.querySelector(
-        "div.InlineChildren__StyledInlineChildren-sc-6r2tfo-0 > div+span+div+span+div"
-      );
-      const deliveryTime = timeElement ? timeElement.textContent.trim() : "N/A";
+    var currentUrl = window.location.href;
+    //for browsing food
+    if(currentUrl.match("www.doordash.com/store") != null) {
 
-      const ratingElement = itemElement.querySelector(
-        "div.InlineChildren__StyledInlineChildren-sc-6r2tfo-0 > div > span"
-      );
-      const rating = ratingElement ? ratingElement.textContent.trim() : "N/A";
+      itemElements.forEach((itemElement) => {
+        // Extract name, price, and rating
+        // customLogger("inside foreach");
+        
+          var nameElement = itemElement.querySelector(
+            '[data-telemetry-id="storeMenuItem.title"]'
+          );
+          var name = nameElement ? nameElement.textContent : "N/A";
+  
+          var priceElement = itemElement.querySelector(
+            '[data-anchor-id="StoreMenuItemPrice"]'
+          );
+          var price = priceElement ? priceElement.textContent.trim() : 'N/A';
+  
+          // Create an object with the extracted details and push it to the items array
+          if (name != 'N/A') {
+            items.push({ name, price });
+          }
+      });
 
-      // Create an object with the extracted details and push it to the items array
-      if (deliveryTime != "Closed") {
-        items.push({ name, deliveryTime, rating });
-      }
-    });
+      //for browsing store
+    } else {
+
+      itemElements.forEach((itemElement) => {
+        // Extract name, price, and rating
+        // customLogger("inside foreach");
+        
+        const nameElement = itemElement.querySelector(
+          'div > [data-telemetry-id="store.name"]'
+        );
+        // customLogger(nameElement);
+        const name = nameElement ? nameElement.textContent.trim() : "N/A";
+        // customLogger(name);
+        const timeElement = itemElement.querySelector(
+          "div.InlineChildren__StyledInlineChildren-sc-6r2tfo-0 > div+span+div+span+div"
+        );
+        const deliveryTime = timeElement ? timeElement.textContent.trim() : "N/A";
+  
+        const ratingElement = itemElement.querySelector(
+          "div.InlineChildren__StyledInlineChildren-sc-6r2tfo-0 > div > span"
+        );
+        const rating = ratingElement ? ratingElement.textContent.trim() : "N/A";
+  
+        // Create an object with the extracted details and push it to the items array
+        if (deliveryTime.match("min") && rating.match(".")) {
+          items.push({ name, deliveryTime, rating });
+        }  
+      });
+
+    }
+    
   }
   // customLogger("inside the getItems function");
   customLogger(items);
@@ -670,7 +896,7 @@ function clickOnAddCart(audioText) {
         customLogger(words);
         var item = 'huhaa';
         words = words.filter((word)=> {
-         return (word != 'Delta' && word!= 'cart' && word != 'add' && word != 'to')  
+         return (word != 'delta' && word!= 'cart' && word != 'add' && word != 'to' && word != 'Delta' && word != 'ad')  
         });
         customLogger(words);
         item = item.toLowerCase();
@@ -704,10 +930,9 @@ function clickOnAddCart(audioText) {
               const addToCartSpan = addToCart.querySelector('span.styles__TextElement-sc-3qedjx-0');
               const addToCartText = addToCartSpan.textContent.trim();
               customLogger(addToCartText);
-              if(addToCartText.match("Required"))
-                makeRequiredSelections();
-
-            },3000);
+              // if(addToCartText.match("Required"))
+              //   makeRequiredSelections();
+            },5000);
             break;
           }
         }
@@ -765,11 +990,17 @@ function clickOnProceedToCheckout() {
       proceedToCheckoutButtons.click();
       setTimeout(()=>{
         const checkOutButton = document.querySelector('[data-anchor-id="CheckoutButton"]');
-        checkOutButton.click();
-        setTimeout(()=>{
-          const placeOrderButton = document.querySelector('[data-anchor-id="PlaceOrderButton"]');
-          placeOrderButton.click();
-        });
+        if(!checkOutButton) {
+          textToSpeech("Your cart is empty");
+          var closeButton = document.querySelector('div.sc-e51fed2e-2 [aria-label="Close"]');
+          closeButton.click();
+        } else {
+          checkOutButton.click();
+        }
+        // setTimeout(()=>{
+        //   const placeOrderButton = document.querySelector('[data-anchor-id="PlaceOrderButton"]');
+        //   placeOrderButton.click();
+        // });
       },1000);
   }
   
