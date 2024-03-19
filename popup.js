@@ -1,7 +1,6 @@
 // import textToSpeech from "./content";
 
 document.getElementById('start-recognition').addEventListener('click', async () => {
-    // textToSpeech("Hi, I am Delta, how may I help you?");
     const activeTab = await chrome.tabs.query({
         active: true,
         currentWindow: true

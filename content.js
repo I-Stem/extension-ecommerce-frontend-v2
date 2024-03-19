@@ -6,9 +6,10 @@ getVisitCount();
 var flag = true;
 //for doordash filter
 let filterToggle = false;
-let foodText = "burger";
+let foodText = "";
 let currentIndexOfItem = 0;
 let readOrder = true;
+let currentMenuCategory = "Most Ordered";
 
 if (flag) {
   getMediaPermission();
@@ -141,18 +142,18 @@ async function userSelected(){
   var menuItems = document.querySelectorAll("div.sc-f9492ecc-11");
   customLogger(menuItems);
   var menuFlag = 0;
-  for(let item of menuItems) {
-    const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
-    const itemName = menuItem.textContent.trim();
-    customLogger(itemName);
-    if(itemName.toLowerCase().match(foodText)) {
-      const menuButton = item.querySelector('button.styles__StyledButtonRoot-sc-1ldytso-0');
-      menuButton.click();
-      menuFlag = 1;
-      break;
-    }
-    // textToSpeech(itemName);
-  }
+  // for(let item of menuItems) {
+  //   const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
+  //   const itemName = menuItem.textContent.trim();
+  //   customLogger(itemName);
+  //   if(itemName.toLowerCase().match(foodText)) {
+  //     const menuButton = item.querySelector('button.styles__StyledButtonRoot-sc-1ldytso-0');
+  //     menuButton.click();
+  //     menuFlag = 1;
+  //     break;
+  //   }
+  //   // textToSpeech(itemName);
+  // }
   if(menuFlag === 0) {
     for(let item of menuItems) {
       const menuItem = item.querySelector(".styles__TextElement-sc-3qedjx-0");
@@ -179,20 +180,20 @@ async function displayMenu() {
   });
 }
 
-async function listItems() {
-  var itemList = await getItemsList();
-  itemList.sort((a, b) => b.rating - a.rating);
-  customLogger(itemList);
-  // itemList.forEach((item)=> {
-  //     textToSpeech(item.name);
-  //     textToSpeech("rating ");
-  //     textToSpeech(item.rating);
-  //     textToSpeech("delivery time ");
-  //     textToSpeech(item.deliveryTime);
-  // });
+// async function listItems() {
+//   var itemList = await getItemsList();
+//   itemList.sort((a, b) => b.rating - a.rating);
+//   customLogger(itemList);
+//   // itemList.forEach((item)=> {
+//   //     textToSpeech(item.name);
+//   //     textToSpeech("rating ");
+//   //     textToSpeech(item.rating);
+//   //     textToSpeech("delivery time ");
+//   //     textToSpeech(item.deliveryTime);
+//   // });
 
-  return itemList;
-}
+//   return itemList;
+// }
 
 async function startRecognition() {
   try {
@@ -326,7 +327,8 @@ async function performAction(result) {
     const textAfterFind = await result[0].substring(indexAfterFind);
     customLogger(textAfterFind);
     foodText = textAfterFind;
-    // foodText = foodText.toLowerCase();
+    customLogger("foodtext");
+    customLogger(foodText);
     await performFind(textAfterFind);
   }
   if (
@@ -465,7 +467,7 @@ async function listTheItemsOnScreen(){
     itemList.sort((a, b) => b.rating - a.rating);
     // customLogger(itemList);
   }
-  let i;
+  let i=0;
   for(i = currentIndexOfItem ; (i < itemList.length && i < currentIndexOfItem+5); i++) {
     let item = itemList[i];
     customLogger(item);
@@ -641,6 +643,8 @@ async function selectMenuItem(selectedItem) {
     if(itemName.toLowerCase().match(selectedItem) || selectedItem.toLowerCase().match(itemName)) {
       const menuButton = item.querySelector('button');
       menuButton.click();
+      currentMenuCategory = itemName;
+      textToSpeech("selected");
       textToSpeech(itemName);
       break;
     }
@@ -696,9 +700,9 @@ async function selectItem(store) {
 async function getItemsList() {
   customLogger("Inside Function: getItemsList");
   // const itemElements = document.querySelectorAll('div.sg-col-20-of-24[data-asin]');
+
   const itemElements = document.querySelectorAll(
-    '[data-component-type="s-search-result"],[data-anchor-id="StoreLayoutListContainer"] > div > a+div,[data-anchor-id="MenuItem"]'
-  );
+    '[data-component-type="s-search-result"],[data-anchor-id="StoreLayoutListContainer"] > div > a+div');
   customLogger(itemElements);
   console.log(typeof itemElements);
   // Initialize an empty array to store the extracted objects
@@ -735,7 +739,21 @@ async function getItemsList() {
     //for browsing food
     if(currentUrl.match("www.doordash.com/store") != null) {
 
-      itemElements.forEach((itemElement) => {
+
+      // to select the items of current menu category
+      var menuSelector = document.querySelectorAll('div.sc-fd2a3720-0');
+      let currentCat = '';
+      for(let menu of menuSelector) {
+        var menuCat = menu.querySelector('div.sc-fd2a3720-1 h2');
+        var name = menuCat.textContent.trim();
+        if(currentMenuCategory === name) {
+          currentCat = menu;
+          break;
+        }
+      }
+      let itemSelector = currentCat.querySelectorAll('[data-anchor-id="MenuItem"]');
+
+      itemSelector.forEach((itemElement) => {
         // Extract name, price, and rating
         // customLogger("inside foreach");
         
@@ -802,7 +820,7 @@ function processScreen() {
   });
 }
 
-function textToSpeech(message) {
+async function textToSpeech(message) {
   customLogger("Inside function: textToSpeech");
   customLogger(message);
 
